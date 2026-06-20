@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мини-Магазин с категориями</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #222222);
+            margin: 0;
+            padding: 15px 15px 80px 15px;
+            box-sizing: border-box;
+        }
+
+        /* --- ШАПКА --- */
+        header {
+            margin-bottom: 15px;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+
+        .balance {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            background-color: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            color: var(--tg-theme-text-color, #000);
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+
+        /* --- НАВИГАЦИЯ (Кнопка Назад) --- */
+        .nav-panel {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .btn-back {
+            display: none; /* Появляется только внутри категорий */
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            background-color: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            color: var(--tg-theme-link-color, #2481cc);
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* --- СЕТКА ДЛЯ ВСЕГО (Категории, Подкатегории, Товары) --- */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        /* Карточки категорий и подкатегорий */
+        .menu-card {
+            background-color: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            border-radius: 12px;
+            padding: 20px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .menu-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        /* Карточки товаров */
+        .product-card {
+            background-color: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .product-img {
+            font-size: 35px;
+            margin-bottom: 8px;
+        }
+
+        .product-title {
+            font-size: 14px;
+            margin: 5px 0;
+            font-weight: 500;
+        }
+
+        .product-price {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--tg-theme-link-color, #2481cc);
+            margin-bottom: 10px;
+        }
+
+        .btn-buy {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            background-color: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* --- ПЛАВАЮЩАЯ КОРЗИНА --- */
+        .floating-cart {
+            display: none;
+            position: fixed;
+            bottom: 75px;
+            right: 20px;
+            background-color: #e53935;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .cart-count {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background-color: white;
+            color: black;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 50%;
+            padding: 2px 6px;
+        }
+
+        /* --- ПОДВАЛ (Футер) --- */
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            padding: 10px 15px;
+            box-sizing: border-box;
+            display: flex;
+            gap: 10px;
+            border-top: 1px solid var(--tg-theme-secondary-bg-color, #eee);
+        }
+
+        .btn-footer {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-button-color, #2481cc);
+            background-color: transparent;
+            color: var(--tg-theme-button-color, #2481cc);
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="user-info">
+            <span id="username">@username</span>
+            <span class="balance">Баланс: <span id="balance-val">0</span> ₽</span>
+        </div>
+        <input type="text" class="search-bar" id="search-input" placeholder="Поиск товаров..." oninput="searchHandler()">
+    </header>
+
+    <div class="nav-panel">
+        <button class="btn-back" id="back-btn" onclick="goBack()">⬅ Назад</button>
+        <div class="section-title" id="main-title">Категории</div>
+    </div>
+
+    <main class="grid-container" id="content-grid">
+        </main>
+
+    <button class="floating-cart" id="cart-btn" onclick="openCart()">
+        🛒
+        <span class="cart-count" id="cart-count">0</span>
+    </button>
+
+    <footer>
+        <button class="btn-footer" onclick="contactSupport()">Поддержка</button>
+        <button class="btn-footer" onclick="openReviews()">Отзывы</button>
+    </footer>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // Данные нашего магазина (база данных прямо в коде для теста)
+        const storeData = {
+            categories: [
+                { id: "clothes", name: "Одежда", icon: "👕", subcategories: ["tshirts", "hoodies"] },
+                { id: "accs", name: "Аксессуары", icon: "💼", subcategories: ["caps", "stickers"] }
+            ],
+            subcategories: {
+                tshirts: { name: "Футболки", icon: "👚", products: [{id: "p1", name: "Футболка TG", price: 1500, img: "👕"}] },
+                hoodies: { name: "Худи", icon: "🧥", products: [{id: "p2", name: "Худи Дурова", price: 3500, img: "🧥"}] },
+                caps: { name: "Кепки", icon: "🧢", products: [{id: "p3", name: "Кепка TMA", price: 1000, img: "🧢"}] },
+                stickers: { name: "Стикеры", icon: "🦄", products: [{id: "p4", name: "Стикерпак", price: 300, img: "🦄"}] }
+            }
+        };
+
+        let currentScreen = "categories"; // Могут быть: "categories", "subcategories", "products"
+        let activeCategoryId = null;
+        let activeSubcategoryId = null;
+        let cart = [];
+
+        // Инициализация данных пользователя
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const user = tg.initDataUnsafe.user;
+            document.getElementById('username').innerText = user.username ? `@${user.username}` : user.first_name;
+        }
+        document.getElementById('balance-val').innerText = "2 500";
+
+        // Функция отрисовки экрана
+        function render() {
+            const grid = document.getElementById('content-grid');
+            const title = document.getElementById('main-title');
+            const backBtn = document.getElementById('back-btn');
+            grid.innerHTML = ""; // Очищаем старый контент
+
+            if (currentScreen === "categories") {
+                title.innerText = "Категории";
+                backBtn.style.display = "none";
+                
+                storeData.categories.forEach(cat => {
+                    grid.innerHTML += `
+                        <div class="menu-card" onclick="selectCategory('${cat.id}')">
+                            <div class="menu-icon">${cat.icon}</div>
+                            <div>${cat.name}</div>
+                        </div>`;
+                });
+            } 
+            else if (currentScreen === "subcategories") {
+                const cat = storeData.categories.find(c => c.id === activeCategoryId);
+                title.innerText = cat.name;
+                backBtn.style.display = "block";
+
+                cat.subcategories.forEach(subId => {
+                    const sub = storeData.subcategories[subId];
+                    grid.innerHTML += `
+                        <div class="menu-card" onclick="selectSubcategory('${subId}')">
+                            <div class="menu-icon">${sub.icon}</div>
+                            <div>${sub.name}</div>
+                        </div>`;
+                });
+            } 
+            else if (currentScreen === "products") {
+                const sub = storeData.subcategories[activeSubcategoryId];
+                title.innerText = sub.name;
+                backBtn.style.display = "block";
+
+                sub.products.forEach(prod => {
+                    grid.innerHTML += `
+                        <div class="product-card">
+                            <div class="product-img">${prod.img}</div>
+                            <div class="product-title">${prod.name}</div>
+                            <div class="product-price">${prod.price} ₽</div>
+                            <button class="btn-buy" onclick="addToCart('${prod.name}')">Купить</button>
+                        </div>`;
+                });
+            }
+        }
+
+        // Логика кликов и переходов
+        function selectCategory(id) {
+            activeCategoryId = id;
+            currentScreen = "subcategories";
+            render();
+        }
+
+        function selectSubcategory(id) {
+            activeSubcategoryId = id;
+            currentScreen = "products";
+            render();
+        }
+
+        function goBack() {
+            if (currentScreen === "products") {
+                currentScreen = "subcategories";
+            } else if (currentScreen === "subcategories") {
+                currentScreen = "categories";
+            }
+            render();
+        }
+
+        // Управление корзиной
+        function addToCart(productName) {
+            cart.push(productName);
+            const cartBtn = document.getElementById('cart-btn');
+            const cartCount = document.getElementById('cart-count');
+            
+            if (cart.length > 0) {
+                cartBtn.style.display = 'flex';
+                cartCount.innerText = Math.min(cart.length, 99);
+            }
+        }
+
+        // Поиск (работает глобально или по текущему экрану)
+        function searchHandler() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const cards = document.querySelectorAll('.menu-card, .product-card');
+
+            cards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                card.style.display = text.includes(query) ? "flex" : "none";
+            });
+        }
+
+        function openCart() { tg.showAlert(`В корзине товаров: ${cart.length}`); }
+        function contactSupport() { tg.showAlert("Связь с поддержкой..."); }
+        function openReviews() { tg.showAlert("Отзывы клиентов..."); }
+
+        // Первый запуск приложения
+        render();
+    </script>
+</body>
+</html>
