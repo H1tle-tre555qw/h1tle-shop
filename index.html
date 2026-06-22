@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мини-Магазин с категориями</title>
+    <title>H1tle Shop</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
@@ -107,7 +107,10 @@
         }
 
         .product-img {
-            font-size: 35px;
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 8px;
             margin-bottom: 8px;
         }
 
@@ -201,159 +204,26 @@
             <span id="username">@username</span>
             <span class="balance">Баланс: <span id="balance-val">0</span> ₽</span>
         </div>
-        <input type="text" class="search-bar" id="search-input" placeholder="Поиск товаров..." oninput="searchHandler()">
+        <input type="text" class="search-bar" id="search-input" placeholder="Поиск товаров...">
     </header>
 
     <div class="nav-panel">
-        <button class="btn-back" id="back-btn" onclick="goBack()">⬅ Назад</button>
+        <button class="btn-back" id="back-btn">⬅ Назад</button>
         <div class="section-title" id="main-title">Категории</div>
     </div>
 
-    <main class="grid-container" id="content-grid">
-        </main>
+    <main class="grid-container" id="content-grid"></main>
 
-    <button class="floating-cart" id="cart-btn" onclick="openCart()">
+    <button class="floating-cart" id="cart-btn">
         🛒
         <span class="cart-count" id="cart-count">0</span>
     </button>
 
     <footer>
-        <button class="btn-footer" onclick="contactSupport()">Поддержка</button>
-        <button class="btn-footer" onclick="openReviews()">Отзывы</button>
+        <button class="btn-footer" id="support-btn">Поддержка</button>
+        <button class="btn-footer" id="reviews-btn">Отзывы</button>
     </footer>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-
-        // Данные нашего магазина (база данных прямо в коде для теста)
-        const storeData = {
-            categories: [
-                { id: "clothes", name: "Одежда", icon: "👕", subcategories: ["tshirts", "hoodies"] },
-                { id: "accs", name: "Аксессуары", icon: "💼", subcategories: ["caps", "stickers"] }
-            ],
-            subcategories: {
-                tshirts: { name: "Футболки", icon: "👚", products: [{id: "p1", name: "Футболка TG", price: 1500, img: "👕"}] },
-                hoodies: { name: "Худи", icon: "🧥", products: [{id: "p2", name: "Худи Дурова", price: 3500, img: "🧥"}] },
-                caps: { name: "Кепки", icon: "🧢", products: [{id: "p3", name: "Кепка TMA", price: 1000, img: "🧢"}] },
-                stickers: { name: "Стикеры", icon: "🦄", products: [{id: "p4", name: "Стикерпак", price: 300, img: "🦄"}] }
-            }
-        };
-
-        let currentScreen = "categories"; // Могут быть: "categories", "subcategories", "products"
-        let activeCategoryId = null;
-        let activeSubcategoryId = null;
-        let cart = [];
-
-        // Инициализация данных пользователя
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            const user = tg.initDataUnsafe.user;
-            document.getElementById('username').innerText = user.username ? `@${user.username}` : user.first_name;
-        }
-        document.getElementById('balance-val').innerText = "2 500";
-
-        // Функция отрисовки экрана
-        function render() {
-            const grid = document.getElementById('content-grid');
-            const title = document.getElementById('main-title');
-            const backBtn = document.getElementById('back-btn');
-            grid.innerHTML = ""; // Очищаем старый контент
-
-            if (currentScreen === "categories") {
-                title.innerText = "Категории";
-                backBtn.style.display = "none";
-                
-                storeData.categories.forEach(cat => {
-                    grid.innerHTML += `
-                        <div class="menu-card" onclick="selectCategory('${cat.id}')">
-                            <div class="menu-icon">${cat.icon}</div>
-                            <div>${cat.name}</div>
-                        </div>`;
-                });
-            } 
-            else if (currentScreen === "subcategories") {
-                const cat = storeData.categories.find(c => c.id === activeCategoryId);
-                title.innerText = cat.name;
-                backBtn.style.display = "block";
-
-                cat.subcategories.forEach(subId => {
-                    const sub = storeData.subcategories[subId];
-                    grid.innerHTML += `
-                        <div class="menu-card" onclick="selectSubcategory('${subId}')">
-                            <div class="menu-icon">${sub.icon}</div>
-                            <div>${sub.name}</div>
-                        </div>`;
-                });
-            } 
-            else if (currentScreen === "products") {
-                const sub = storeData.subcategories[activeSubcategoryId];
-                title.innerText = sub.name;
-                backBtn.style.display = "block";
-
-                sub.products.forEach(prod => {
-                    grid.innerHTML += `
-                        <div class="product-card">
-                            <div class="product-img">${prod.img}</div>
-                            <div class="product-title">${prod.name}</div>
-                            <div class="product-price">${prod.price} ₽</div>
-                            <button class="btn-buy" onclick="addToCart('${prod.name}')">Купить</button>
-                        </div>`;
-                });
-            }
-        }
-
-        // Логика кликов и переходов
-        function selectCategory(id) {
-            activeCategoryId = id;
-            currentScreen = "subcategories";
-            render();
-        }
-
-        function selectSubcategory(id) {
-            activeSubcategoryId = id;
-            currentScreen = "products";
-            render();
-        }
-
-        function goBack() {
-            if (currentScreen === "products") {
-                currentScreen = "subcategories";
-            } else if (currentScreen === "subcategories") {
-                currentScreen = "categories";
-            }
-            render();
-        }
-
-        // Управление корзиной
-        function addToCart(productName) {
-            cart.push(productName);
-            const cartBtn = document.getElementById('cart-btn');
-            const cartCount = document.getElementById('cart-count');
-            
-            if (cart.length > 0) {
-                cartBtn.style.display = 'flex';
-                cartCount.innerText = Math.min(cart.length, 99);
-            }
-        }
-
-        // Поиск (работает глобально или по текущему экрану)
-        function searchHandler() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const cards = document.querySelectorAll('.menu-card, .product-card');
-
-            cards.forEach(card => {
-                const text = card.innerText.toLowerCase();
-                card.style.display = text.includes(query) ? "flex" : "none";
-            });
-        }
-
-        function openCart() { tg.showAlert(`В корзине товаров: ${cart.length}`); }
-        function contactSupport() { tg.showAlert("Связь с поддержкой..."); }
-        function openReviews() { tg.showAlert("Отзывы клиентов..."); }
-
-        // Первый запуск приложения
-        render();
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
