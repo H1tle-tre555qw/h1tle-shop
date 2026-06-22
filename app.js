@@ -4,7 +4,7 @@ tg.ready();
 tg.expand();
 
 // Базовый URL вашего FastAPI бэкенда
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "https://honest-foxes-tap.loca.lt";
 
 // Состояние приложения
 let currentScreen = "categories"; // "categories", "subcategories", "products"
