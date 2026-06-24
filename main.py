@@ -40,18 +40,30 @@ async def get_user_data(tg_id: int):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# ЭНДПОИНТЫ ДЛЯ МНОГОУРОВНЕВОГО КАТАЛОГА
+# ЭНДПОИНТЫ ДЛЯ МНОГОУРОВНЕВОГО КАТАЛОГА (Убрали async!)
 @app.get("/api/categories")
-async def fetch_categories():
-    return get_categories()  # Убедитесь, что внутри функции get_categories теперь запрос к Supabase!
+def fetch_categories():
+    try:
+        return get_categories()
+    except Exception as e:
+        logging.error(f"Ошибка в get_categories: {e}")
+        return []
 
 @app.get("/api/subcategories/{category_id}")
-async def fetch_subcategories(category_id: int):
-    return get_subcategories(category_id)
+def fetch_subcategories(category_id: int):
+    try:
+        return get_subcategories(category_id)
+    except Exception as e:
+        logging.error(f"Ошибка в get_subcategories: {e}")
+        return []
 
 @app.get("/api/products/{subcategory_id}")
-async def fetch_products(subcategory_id: int):
-    return get_products(subcategory_id)
+def fetch_products(subcategory_id: int):
+    try:
+        return get_products(subcategory_id)
+    except Exception as e:
+        logging.error(f"Ошибка в get_products: {e}")
+        return []
 
 @app.get("/")
 async def root():
