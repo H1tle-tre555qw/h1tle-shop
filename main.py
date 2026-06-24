@@ -5,7 +5,6 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from aiogram import Bot, Dispatcher
-from config import BOT_TOKEN
 from database.db import get_categories, get_products, get_subcategories
 from handlers import register_all_handlers
 from supabase import create_client, Client
