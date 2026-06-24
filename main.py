@@ -53,6 +53,10 @@ async def fetch_subcategories(category_id: int):
 async def fetch_products(subcategory_id: int):
     return get_products(subcategory_id)
 
+@app.get("/")
+async def root():
+    return {"status": "alive", "message": "H1tle Shop Backend is running"}
+
 
 async def main():
     # init_db() # Локальный SQLite больше инициализировать не нужно
