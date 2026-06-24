@@ -92,8 +92,14 @@ def fetch_products(subcategory_id: int):
 # =====================================================================
 
 async def main():
-    # Инициализация бота Telegram
-    bot = Bot(token=BOT_TOKEN)
+    # Достаем новый токен из панели Render (или из .env локально)
+    bot_token = os.getenv("BOT_TOKEN")
+    
+    if not bot_token:
+        logging.error("Переменная BOT_TOKEN не найдена в переменных окружения!")
+        return
+
+    bot = Bot(token=bot_token)
     dp = Dispatcher()
     register_all_handlers(dp)
     
