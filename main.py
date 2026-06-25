@@ -26,10 +26,12 @@ app.add_middleware(
 )
 
 # Подключаем Supabase с отключенным HTTP/2 во избежание ошибок StreamReset на Render
+# Замените создание клиента supabase на этот код:
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-options = ClientOptions(http2=False)
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY, options=options)
+
+# Инициализируем клиент напрямую без передачи устаревшего параметра http2
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 # =====================================================================
