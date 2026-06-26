@@ -1,5 +1,7 @@
 import os
 from supabase import create_client, Client
+import requests
+import logging
 
 # Инициализируем клиент Supabase
 # В облаке Render эти переменные возьмутся из Environment Variables,
@@ -62,10 +64,39 @@ def update_user_balance(tg_id: int, amount: int):
 # МНОГОУРОВНЕВЫЙ КАТАЛОГ ТОВАРОВ
 # ==========================================
 
+
 def get_categories():
-    """Получает все главные категории из Supabase"""
-    response = supabase.table("categories").select("id, name").execute()
-    return response.data
+    """Получение категорий напрямую через REST API Supabase (без HTTP/2 ошибок)"""
+    try:
+        # Берем доступы из переменных окружения
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_KEY")
+        
+        if not supabase_url or not supabase_key:
+            logging.error("SUPABASE_URL или SUPABASE_KEY не заданы в окружении!")
+            return []
+
+        # Формируем прямой URL к таблице categories
+        url = f"{supabase_url.rstrip('/')}/rest/v1/categories?select=id,name"
+        
+        # Заголовки авторизации Supabase
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}"
+        }
+        
+        # Делаем обычный стабильный HTTP/1.1 запрос
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logging.error(f"Supabase API вернул код {response.status_code}: {response.text}")
+            return []
+            
+    except Exception as e:
+        logging.error(f"Критическая ошибка в get_categories: {e}")
+        return []
 
 
 def get_subcategories(category_id: int):
