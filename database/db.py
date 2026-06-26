@@ -6,13 +6,16 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 def get_supabase_credentials():
-    """Вспомогательная функция для получения доступов"""
+    """Вспомогательная функция для получения доступов с автоочисткой от пробелов"""
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_KEY")
+    
     if not supabase_url or not supabase_key:
         logging.error("❌ КРИТИЧЕСКАЯ ОШИБКА: SUPABASE_URL или SUPABASE_KEY не заданы в Environment Variables!")
         return None, None
-    return supabase_url.rstrip('/'), supabase_key
+        
+    # .strip() удалит случайные пробелы и символы переноса строки, из-за которых падал requests
+    return supabase_url.strip().rstrip('/'), supabase_key.strip()
 
 
 def add_user(tg_id: int, username: str):
