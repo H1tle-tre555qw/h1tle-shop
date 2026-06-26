@@ -27,7 +27,7 @@ if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
     const user = tg.initDataUnsafe.user;
     document.getElementById('username').innerText = user.username ? `@${user.username}` : user.first_name;
 }
-document.getElementById('balance-val').innerText = "2 500"; // Тут позже можно сделать динамический баланс из БД
+document.getElementById('balance-val').innerText = "0"; // Тут позже можно сделать динамический баланс из БД
 
 // --- ГЛАВНАЯ ФУНКЦИЯ ОТРИСОВКИ ---
 async function render() {
