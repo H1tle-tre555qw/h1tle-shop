@@ -110,7 +110,7 @@ def get_products(subcategory_id: int):
         logging.error(f"Исключение in get_products: {e}")
         return []
     
-    
+
 def get_user_data_db(tg_id: int):
     """Получение данных пользователя (баланс и юзернейм) через чистый HTTP"""
     url_base, key = get_supabase_credentials()
@@ -136,15 +136,24 @@ def search_products(query: str):
     if not url_base or not query:
         return []
         
-    # Формируем фильтр: проверяем name ИЛИ description без учета регистра (ilike)
-    url = f"{url_base}/rest/v1/products?or=(name.ilike.*{query}*,description.ilike.*{query}*)&select=id,name,price,image_url,subcategory_id"
-    headers = {"apikey": key, "Authorization": f"Bearer {key}"}
+    # Заменяем пробелы на %20 и экранируем спецсимволы
+    import urllib.parse
+    clean_query = urllib.parse.quote(f"%{query}%")
+    
+    # Формируем строгий URL для Supabase REST API без лишних символов
+    url = f"{url_base}/rest/v1/products?or=(name.ilike.{clean_query},description.ilike.{clean_query})&select=id,name,price,image_url,subcategory_id"
+    headers = {
+        "apikey": key, 
+        "Authorization": f"Bearer {key}"
+    }
     
     try:
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             return response.json()
-        logging.error(f"Supabase вернул ошибку в search_products: {response.status_code}")
+        
+        # Если статус не 200, выведем в логи Render текст ошибки от Supabase
+        logging.error(f"Supabase вернул ошибку {response.status_code}: {response.text}")
         return []
     except Exception as e:
         logging.error(f"Исключение в search_products: {e}")
