@@ -7,12 +7,13 @@ tg.expand();
 const API_BASE_URL = "https://h1tle-shop.onrender.com"; 
 
 // Состояние приложения
-let currentScreen = "categories"; // "categories", "subcategories", "products"
+let currentScreen = "categories"; // "categories", "subcategories", "products", "search"
 let activeCategoryId = null;
 let activeSubcategoryId = null;
 let activeCategoryName = "Категории";
 let activeSubcategoryName = "";
 let cart = [];
+let searchTimeout = null;
 
 // DOM Элементы
 const grid = document.getElementById('content-grid');
@@ -27,10 +28,13 @@ if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
     const user = tg.initDataUnsafe.user;
     document.getElementById('username').innerText = user.username ? `@${user.username}` : user.first_name;
 }
-document.getElementById('balance-val').innerText = "0"; // Тут позже можно сделать динамический баланс из БД
+document.getElementById('balance-val').innerText = "0"; // Динамический баланс из БД
 
 // --- ГЛАВНАЯ ФУНКЦИЯ ОТРИСОВКИ ---
 async function render() {
+    // Если мы сейчас находимся в режиме глобального поиска, обычный рендер не должен перебивать экран
+    if (currentScreen === "search") return;
+
     grid.innerHTML = "<div style='grid-column: span 2; text-align:center;'>Загрузка...</div>"; 
 
     try {
@@ -44,7 +48,6 @@ async function render() {
             
             grid.innerHTML = "";
             categories.forEach(cat => {
-                // Так как картинок в таблице categories у нас нет, используем дефолтную иконку 📁
                 grid.innerHTML += `
                     <div class="menu-card" data-id="${cat.id}" data-name="${cat.name}">
                         <div class="menu-icon">📁</div>
@@ -109,7 +112,6 @@ async function render() {
             }
 
             products.forEach(prod => {
-                // Используем ссылку из БД, если её нет — ставим заглушку-эмодзи 📦
                 const imgHTML = prod.image_url && prod.image_url.startsWith('http') 
                     ? `<img src="${prod.image_url}" class="product-img" alt="${prod.name}">`
                     : `<div class="menu-icon">📦</div>`;
@@ -137,9 +139,77 @@ async function render() {
     }
 }
 
+// --- ГЛОБАЛЬНЫЙ ПОИСК ЧЕРЕЗ API ---
+function searchHandler() {
+    const query = searchInput.value.trim();
+
+    // Сбрасываем предыдущий таймер, чтобы не слать запросы на каждую букву
+    clearTimeout(searchTimeout);
+
+    // Если строку поиска полностью очистили — возвращаем пользователя на экран категорий
+    if (!query) {
+        currentScreen = "categories";
+        render();
+        return;
+    }
+
+    // Делаем задержку в 400мс перед отправкой запроса на сервер (Debounce)
+    searchTimeout = setTimeout(async () => {
+        currentScreen = "search";
+        await renderSearch(query);
+    }, 400);
+}
+
+// Отдельная функция отрисовки результатов поиска по всей базе данных
+async function renderSearch(query) {
+    grid.innerHTML = "<div style='grid-column: span 2; text-align:center;'>Поиск товаров...</div>";
+    title.innerText = "Результаты поиска";
+    backBtn.style.display = "block"; 
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/products/search?query=${encodeURIComponent(query)}`);
+        const products = await response.json();
+
+        grid.innerHTML = "";
+        if (products.length === 0) {
+            grid.innerHTML = "<div style='grid-column: span 2; text-align:center;'>Ничего не найдено 😕</div>";
+            return;
+        }
+
+        products.forEach(prod => {
+            const imgHTML = prod.image_url && prod.image_url.startsWith('http') 
+                ? `<img src="${prod.image_url}" class="product-img" alt="${prod.name}">`
+                : `<div class="menu-icon">📦</div>`;
+
+            grid.innerHTML += `
+                <div class="product-card">
+                    ${imgHTML}
+                    <div class="product-title">${prod.name}</div>
+                    <div class="product-price">${prod.price} ₽</div>
+                    <button class="btn-buy" data-name="${prod.name}">Купить</button>
+                </div>`;
+        });
+
+        // Навешиваем клики на кнопки «Купить» для найденных товаров
+        document.querySelectorAll('.btn-buy').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const productName = btn.getAttribute('data-name');
+                addToCart(productName);
+            });
+        });
+
+    } catch (error) {
+        console.error("Ошибка при поиске:", error);
+        grid.innerHTML = "<div style='grid-column: span 2; text-align:center; color:red;'>Ошибка поиска</div>";
+    }
+}
+
 // --- ЛОГИКА НАВИГАЦИИ НАЗАД ---
 function goBack() {
-    if (currentScreen === "products") {
+    if (currentScreen === "search") {
+        searchInput.value = ""; // Очищаем поле поиска при выходе из него
+        currentScreen = "categories";
+    } else if (currentScreen === "products") {
         currentScreen = "subcategories";
     } else if (currentScreen === "subcategories") {
         currentScreen = "categories";
@@ -154,17 +224,6 @@ function addToCart(productName) {
         cartBtn.style.display = 'flex';
         cartCount.innerText = Math.min(cart.length, 99);
     }
-}
-
-// --- ЖИВОЙ ПОИСК ---
-function searchHandler() {
-    const query = searchInput.value.toLowerCase();
-    const cards = document.querySelectorAll('.menu-card, .product-card');
-
-    cards.forEach(card => {
-        const text = card.innerText.toLowerCase();
-        card.style.display = text.includes(query) ? "flex" : "none";
-    });
 }
 
 // --- НАЗНАЧЕНИЕ СОБЫТИЙ СЛУШАТЕЛЯМ ---
