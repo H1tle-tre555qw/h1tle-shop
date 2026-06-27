@@ -109,3 +109,43 @@ def get_products(subcategory_id: int):
     except Exception as e:
         logging.error(f"Исключение in get_products: {e}")
         return []
+    
+    
+def get_user_data_db(tg_id: int):
+    """Получение данных пользователя (баланс и юзернейм) через чистый HTTP"""
+    url_base, key = get_supabase_credentials()
+    if not url_base:
+        return None
+        
+    url = f"{url_base}/rest/v1/users?tg_id=eq.{tg_id}&select=username,balance"
+    headers = {"apikey": key, "Authorization": f"Bearer {key}"}
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200 and response.json():
+            return response.json()[0]
+        return None
+    except Exception as e:
+        logging.error(f"Исключение в get_user_data_db: {e}")
+        return None
+
+
+def search_products(query: str):
+    """Глобальный поиск товаров по названию или описанию независимо от категории"""
+    url_base, key = get_supabase_credentials()
+    if not url_base or not query:
+        return []
+        
+    # Формируем фильтр: проверяем name ИЛИ description без учета регистра (ilike)
+    url = f"{url_base}/rest/v1/products?or=(name.ilike.*{query}*,description.ilike.*{query}*)&select=id,name,price,image_url,subcategory_id"
+    headers = {"apikey": key, "Authorization": f"Bearer {key}"}
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        logging.error(f"Supabase вернул ошибку в search_products: {response.status_code}")
+        return []
+    except Exception as e:
+        logging.error(f"Исключение в search_products: {e}")
+        return []

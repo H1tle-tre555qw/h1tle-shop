@@ -5,10 +5,10 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from aiogram import Bot, Dispatcher
-from database.db import get_categories, get_products, get_subcategories
+
+# Импортируем ВСЕ функции из базы данных
+from database.db import get_categories, get_products, get_subcategories, get_user_data_db, search_products
 from handlers import register_all_handlers
-from supabase import create_client, Client
-from supabase.lib.client_options import ClientOptions
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -25,17 +25,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Подключаем Supabase с отключенным HTTP/2 во избежание ошибок StreamReset на Render
-# Замените создание клиента supabase на этот код:
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-# Инициализируем клиент напрямую без передачи устаревшего параметра http2
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-
 # =====================================================================
-# ЭНДПОИНТЫ API ДЛЯ ВЕБ-ПРИЛОЖЕНИЯ (Синхронные во избежание блокировок)
+# ЭНДПОИНТЫ API ДЛЯ ВЕБ-ПРИЛОЖЕНИЯ
 # =====================================================================
 
 @app.get("/")
@@ -48,9 +39,8 @@ def root():
 def get_user_data(tg_id: int):
     """Получение данных пользователя (баланс и юзернейм)"""
     try:
-        response = supabase.table("users").select("username, balance").eq("tg_id", tg_id).execute()
-        if response.data:
-            user = response.data[0]
+        user = get_user_data_db(tg_id)
+        if user:
             return {"status": "success", "username": user["username"], "balance": user["balance"]}
         return {"status": "error", "message": "User not found"}
     except Exception as e:
@@ -84,7 +74,17 @@ def fetch_products(subcategory_id: int):
     try:
         return get_products(subcategory_id)
     except Exception as e:
-        logging.error(f"Ошибка in get_products: {e}")
+        logging.error(f"Ошибка в get_products: {e}")
+        return []
+
+
+@app.get("/api/products/search")
+def api_search_products(query: str = ""):
+    """Глобальный поиск по товарам"""
+    try:
+        return search_products(query)
+    except Exception as e:
+        logging.error(f"Ошибка в api_search_products: {e}")
         return []
 
 
@@ -93,7 +93,6 @@ def fetch_products(subcategory_id: int):
 # =====================================================================
 
 async def main():
-    # Достаем новый токен из панели Render (или из .env локально)
     bot_token = os.getenv("BOT_TOKEN")
     
     if not bot_token:
@@ -104,16 +103,13 @@ async def main():
     dp = Dispatcher()
     register_all_handlers(dp)
     
-    # Динамически берём порт, который выдает среда Render
     port = int(os.getenv("PORT", 10000))
     
-    # Настройка конфигурации веб-сервера Uvicorn
     config = uvicorn.Config(app=app, host="0.0.0.0", port=port, loop="asyncio")
     server = uvicorn.Server(config)
     
     print(f"Бот и FastAPI запускаются на порту {port}...")
     
-    # Одновременный запуск Long Polling бота и веб-сервера API
     await asyncio.gather(
         dp.start_polling(bot),
         server.serve()
