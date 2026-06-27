@@ -136,12 +136,11 @@ def search_products(query: str):
     if not url_base or not query:
         return []
         
-    # Заменяем пробелы на %20 и экранируем спецсимволы
-    import urllib.parse
-    clean_query = urllib.parse.quote(f"%{query}%")
+    # Базовый синтаксис Supabase: ilike.*слово*
+    # Используем нижний регистр для надежности
+    search_val = f"*{query.lower()}*"
+    url = f"{url_base}/rest/v1/products?or=(name.ilike.{search_val},description.ilike.{search_val})&select=id,name,price,image_url,subcategory_id"
     
-    # Формируем строгий URL для Supabase REST API без лишних символов
-    url = f"{url_base}/rest/v1/products?or=(name.ilike.{clean_query},description.ilike.{clean_query})&select=id,name,price,image_url,subcategory_id"
     headers = {
         "apikey": key, 
         "Authorization": f"Bearer {key}"
@@ -151,8 +150,6 @@ def search_products(query: str):
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             return response.json()
-        
-        # Если статус не 200, выведем в логи Render текст ошибки от Supabase
         logging.error(f"Supabase вернул ошибку {response.status_code}: {response.text}")
         return []
     except Exception as e:

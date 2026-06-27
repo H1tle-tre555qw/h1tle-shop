@@ -140,31 +140,19 @@ async function render() {
 }
 
 // --- ГЛОБАЛЬНЫЙ ПОИСК ЧЕРЕЗ API ---
-function searchHandler() {
+async function searchHandler() {
     const query = searchInput.value.trim();
 
-    // Сбрасываем предыдущий таймер, чтобы не слать запросы на каждую букву
-    clearTimeout(searchTimeout);
-
-    // Если строку поиска полностью очистили — возвращаем пользователя на экран категорий
     if (!query) {
         currentScreen = "categories";
         render();
         return;
     }
 
-    // Делаем задержку в 400мс перед отправкой запроса на сервер (Debounce)
-    searchTimeout = setTimeout(async () => {
-        currentScreen = "search";
-        await renderSearch(query);
-    }, 400);
-}
-
-// Отдельная функция отрисовки результатов поиска по всей базе данных
-async function renderSearch(query) {
-    grid.innerHTML = "<div style='grid-column: span 2; text-align:center;'>Поиск товаров...</div>";
+    // Включаем статус поиска
     title.innerText = "Результаты поиска";
-    backBtn.style.display = "block"; 
+    backBtn.style.display = "block";
+    grid.innerHTML = "<div style='grid-column: span 2; text-align:center;'>Поиск...</div>";
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/products/search?query=${encodeURIComponent(query)}`);
@@ -190,17 +178,15 @@ async function renderSearch(query) {
                 </div>`;
         });
 
-        // Навешиваем клики на кнопки «Купить» для найденных товаров
         document.querySelectorAll('.btn-buy').forEach(btn => {
             btn.addEventListener('click', () => {
-                const productName = btn.getAttribute('data-name');
-                addToCart(productName);
+                addToCart(btn.getAttribute('data-name'));
             });
         });
 
     } catch (error) {
         console.error("Ошибка при поиске:", error);
-        grid.innerHTML = "<div style='grid-column: span 2; text-align:center; color:red;'>Ошибка поиска</div>";
+        grid.innerHTML = "<div style='grid-column: span 2; text-align:center; color:red;'>Ошибка загрузки результатов</div>";
     }
 }
 
